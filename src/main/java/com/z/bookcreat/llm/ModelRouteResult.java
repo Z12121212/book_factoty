@@ -27,6 +27,8 @@ public class ModelRouteResult {
 
     private String modelType;
 
+    private String metadataJson;
+
     private Long sceneId;
 
     private String sceneCode;

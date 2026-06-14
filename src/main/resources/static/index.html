@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Creat Console</title>
+    <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<div class="app-shell">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-mark">BC</div>
+            <div>
+                <div class="brand-title">Book Creat</div>
+                <div class="brand-subtitle">Novel Admin Console</div>
+            </div>
+        </div>
+        <nav class="nav">
+            <button class="nav-item active" data-panel="genres">题材</button>
+            <button class="nav-item" data-panel="novels">小说</button>
+            <button class="nav-item" data-panel="outlines">大纲</button>
+            <button class="nav-item" data-panel="llm-providers">LLM 供应商</button>
+            <button class="nav-item" data-panel="llm-models">LLM 模型</button>
+            <button class="nav-item" data-panel="llm-scenes">LLM 场景</button>
+            <button class="nav-item" data-panel="llm-bindings">场景绑定</button>
+            <button class="nav-item" data-panel="llm-overrides">小说覆盖</button>
+            <button class="nav-item" data-panel="llm-route">路由测试</button>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <header class="topbar">
+            <div>
+                <h1 id="panel-title">题材管理</h1>
+                <p id="panel-subtitle">创建与维护小说题材。</p>
+            </div>
+            <div class="status-box">
+                <span class="status-dot"></span>
+                <span>Local API</span>
+            </div>
+        </header>
+
+        <section class="panel active" id="panel-genres">
+            <div class="layout-grid">
+                <section class="card">
+                    <div class="card-header">
+                        <h2>新建题材</h2>
+                    </div>
+                    <form id="genre-form" class="form-grid">
+                        <label>
+                            <span>名称</span>
+                            <input name="name" required maxlength="64" placeholder="末世">
+                        </label>
+                        <label>
+                            <span>说明</span>
+                            <textarea name="description" rows="3" maxlength="500" placeholder="题材定位"></textarea>
+                        </label>
+                        <label>
+                            <span>提示补充</span>
+                            <textarea name="promptHint" rows="4" placeholder="写作时的默认提示方向"></textarea>
+                        </label>
+                        <button type="submit" class="primary">创建题材</button>
+                    </form>
+                </section>
+                <section class="card">
+                    <div class="card-header">
+                        <h2>题材列表</h2>
+                        <button class="ghost" data-action="refresh-genres">刷新</button>
+                    </div>
+                    <div id="genres-list" class="list"></div>
+                </section>
+            </div>
+        </section>
+
+        <section class="panel" id="panel-novels">
+            <div class="layout-grid">
+                <section class="card">
+                    <div class="card-header">
+                        <h2>新建小说</h2>
+                    </div>
+                    <div class="subtool">
+                        <div class="subtool-header">
+                            <h3>AI 创意助手</h3>
+                            <button type="button" class="ghost" id="generate-ideas-btn">生成创意</button>
+                        </div>
+                        <div class="subtool-grid">
+                            <label>
+                                <span>创意数量</span>
+                                <select id="idea-count">
+                                    <option value="3">3 个</option>
+                                    <option value="4">4 个</option>
+                                    <option value="5">5 个</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span>说明</span>
+                                <input value="使用当前题材和核心创意输入框内容作为提示" readonly>
+                            </label>
+                        </div>
+                        <div id="idea-results" class="assistant-results empty-box">点击“生成创意”后在这里查看候选创意。</div>
+                    </div>
+                    <form id="novel-form" class="form-grid">
+                        <label><span>用户ID</span><input name="userId" required value="1" readonly></label>
+                        <label><span>题材</span><select name="genreId" required data-select="genres"></select></label>
+                        <label><span>标题</span><input name="title" required maxlength="128"></label>
+                        <label><span>核心创意</span><textarea name="idea" rows="4" required></textarea></label>
+                        <label><span>目标总字数</span><input name="targetWordCount" type="number" min="1" value="2500000"></label>
+                        <label><span>每章字数</span><input name="wordsPerChapter" type="number" min="500" value="2500"></label>
+                        <label><span>写作风格</span><textarea name="writingStyle" rows="3"></textarea></label>
+                        <label><span>扩展配置 JSON（预留）</span><textarea name="configJson" rows="3" placeholder='{"strictOutline":true,"pointOfView":"third_person"}'>{}</textarea></label>
+                        <button type="submit" class="primary">创建小说</button>
+                    </form>
+                </section>
+                <section class="card">
+                    <div class="card-header">
+                        <h2>小说列表</h2>
+                        <button class="ghost" data-action="refresh-novels">刷新</button>
+                    </div>
+                    <div id="novels-list" class="list"></div>
+                </section>
+            </div>
+        </section>
+
+        <section class="panel" id="panel-outlines">
+            <div class="layout-grid">
+                <section class="card">
+                    <div class="card-header">
+                        <h2>新建大纲版本</h2>
+                    </div>
+                    <div class="subtool">
+                        <div class="subtool-header">
+                            <h3>AI 大纲助手</h3>
+                            <button type="button" class="ghost" id="generate-outline-btn">AI 生成大纲</button>
+                        </div>
+                        <p class="subtool-tip">先有全书大纲和结局设定，再生成分卷大纲，最后按卷生成章节大纲。</p>
+                        <div class="subtool-grid">
+                            <label class="outline-option always-show">
+                                <span>生成模式</span>
+                                <select id="outline-mode">
+                                    <option value="global">全书大纲</option>
+                                    <option value="volume">分卷大纲</option>
+                                    <option value="chapter">章节大纲</option>
+                                    <option value="ending">结局设定</option>
+                                </select>
+                            </label>
+                            <label class="outline-option mode-volume is-hidden">
+                                <span>分卷数量</span>
+                                <input id="outline-volume-count" type="number" min="1" placeholder="例如 4">
+                            </label>
+                            <label class="outline-option mode-volume is-hidden">
+                                <span>每卷预计章节数</span>
+                                <input id="outline-chapters-per-volume" type="number" min="1" placeholder="例如 30">
+                            </label>
+                            <label class="outline-option mode-chapter is-hidden">
+                                <span>目标卷序号</span>
+                                <input id="outline-volume-no" type="number" min="1" placeholder="章节大纲常用">
+                            </label>
+                            <label class="outline-option mode-chapter is-hidden">
+                                <span>起始章节号</span>
+                                <input id="outline-start-chapter-no" type="number" min="1" placeholder="例如 1">
+                            </label>
+                            <label class="outline-option mode-chapter is-hidden">
+                                <span>结束章节号</span>
+                                <input id="outline-end-chapter-no" type="number" min="1" placeholder="例如 30">
+                            </label>
+                            <label class="outline-option full-span always-show">
+                                <span>补充要求</span>
+                                <textarea id="outline-user-instruction" rows="3" placeholder="例如：更强调悬疑推进，分卷之间要有明显升级。"></textarea>
+                            </label>
+                        </div>
+                        <div id="outline-result" class="assistant-results empty-box">点击“AI 生成大纲”后在这里查看结果。</div>
+                    </div>
+                    <form id="outline-form" class="form-grid">
+                        <label><span>小说</span><select name="novelId" required data-select="novels"></select></label>
+                        <label>
+                            <span>大纲类型</span>
+                            <select name="outlineType">
+                                <option value="global">全书大纲</option>
+                                <option value="volume">分卷大纲</option>
+                                <option value="chapter">章节大纲</option>
+                                <option value="ending">结局设定</option>
+                            </select>
+                        </label>
+                        <label><span>标题</span><input name="title" maxlength="128"></label>
+                        <label><span>内容</span><textarea name="content" rows="10" required></textarea></label>
+                        <button type="submit" class="primary">创建大纲版本</button>
+                    </form>
+                </section>
+                <section class="card">
+                    <div class="card-header">
+                        <h2>大纲查询</h2>
+                    </div>
+                    <form id="outline-query-form" class="inline-form">
+                        <select name="novelId" required data-select="novels"></select>
+                        <select name="outlineType">
+                            <option value="">全部类型</option>
+                            <option value="global">全书大纲</option>
+                            <option value="volume">分卷大纲</option>
+                            <option value="chapter">章节大纲</option>
+                            <option value="ending">结局设定</option>
+                        </select>
+                        <button type="submit" class="primary">查询</button>
+                    </form>
+                    <div id="outlines-list" class="list"></div>
+                </section>
+            </div>
+        </section>
+
+        <section class="panel" id="panel-llm-providers">
+            <div class="layout-grid">
+                <section class="card">
+                    <div class="card-header">
+                        <h2>新增供应商</h2>
+                    </div>
+                    <form id="provider-form" class="form-grid">
+                        <label><span>协议编码</span><input name="providerCode" required placeholder="openai"></label>
+                        <label><span>展示名称</span><input name="providerName" required placeholder="我的中转站"></label>
+                        <label><span>Base URL</span><input name="baseUrl" required placeholder="https://.../v1"></label>
+                        <label><span>API Key</span><input name="apiKey" required type="password"></label>
+                        <button type="submit" class="primary">创建供应商</button>
+                    </form>
+                </section>
+                <section class="card">
+                    <div class="card-header">
+                        <h2>供应商列表</h2>
+                        <button class="ghost" data-action="refresh-providers">刷新</button>
+                    </div>
+                    <div id="providers-list" class="list"></div>
+                </section>
+            </div>
+        </section>
+
+        <section class="panel" id="panel-llm-models">
+            <div class="layout-grid">
+                <section class="card">
+                    <div class="card-header">
+                        <h2>新增模型</h2>
+                    </div>
+                    <form id="model-form" class="form-grid">
+                        <label><span>供应商</span><select name="providerId" required data-select="providers"></select></label>
+                        <label><span>模型代码</span><input name="modelCode" required placeholder="claude-sonnet-4"></label>
+                        <label><span>展示名称</span><input name="modelName" required placeholder="Claude Sonnet 4"></label>
+                        <label>
+                            <span>模型类型</span>
+                            <select name="modelType">
+                                <option value="chat">对话模型</option>
+                                <option value="embedding">向量模型</option>
+                            </select>
+                        </label>
+                        <label><span>上下文窗口</span><input name="contextWindow" type="number"></label>
+                        <label><span>最大输出</span><input name="maxOutputTokens" type="number"></label>
+                        <label><span>支持流式</span><select name="supportsStream"><option value="1">1</option><option value="0">0</option></select></label>
+                        <label><span>支持 JSON</span><select name="supportsJson"><option value="1">1</option><option value="0">0</option></select></label>
+                        <label><span>支持工具</span><select name="supportsTools"><option value="1">1</option><option value="0">0</option></select></label>
+                        <label><span>扩展元数据</span><textarea name="metadataJson" rows="3">{}</textarea></label>
+                        <button type="submit" class="primary">创建模型</button>
+                    </form>
+                </section>
+                <section class="card">
+                    <div class="card-header">
+                        <h2>模型列表</h2>
+                        <button class="ghost" data-action="refresh-models">刷新</button>
+                    </div>
+                    <div id="models-list" class="list"></div>
+                </section>
+            </div>
+        </section>
+
+        <section class="panel" id="panel-llm-scenes">
+            <div class="layout-grid">
+                <section class="card">
+                    <div class="card-header">
+                        <h2>新增场景</h2>
+                    </div>
+                    <form id="scene-form" class="form-grid">
+                        <label><span>场景编码</span><input name="sceneCode" required placeholder="chapter_generate"></label>
+                        <label><span>场景名称</span><input name="sceneName" required placeholder="章节生成"></label>
+                        <label><span>场景类型</span>
+                            <select name="sceneType">
+                                <option value="generate">内容生成</option>
+                                <option value="extract">信息提取</option>
+                                <option value="review">审查评估</option>
+                                <option value="embed">向量处理</option>
+                            </select>
+                        </label>
+                        <label><span>描述</span><textarea name="description" rows="4"></textarea></label>
+                        <button type="submit" class="primary">创建场景</button>
+                    </form>
+                </section>
+                <section class="card">
+                    <div class="card-header">
+                        <h2>场景列表</h2>
+                        <button class="ghost" data-action="refresh-scenes">刷新</button>
+                    </div>
+                    <div id="scenes-list" class="list"></div>
+                </section>
+            </div>
+        </section>
+
+        <section class="panel" id="panel-llm-bindings">
+            <div class="layout-grid">
+                <section class="card">
+                    <div class="card-header">
+                        <h2>绑定场景与模型</h2>
+                    </div>
+                    <form id="binding-form" class="form-grid">
+                        <label><span>场景</span><select name="sceneId" required data-select="scenes"></select></label>
+                        <label><span>模型</span><select name="modelId" required data-select="models"></select></label>
+                        <label><span>优先级</span><input name="priority" type="number" required value="1"></label>
+                        <label><span>角色</span>
+                            <select name="roleType">
+                                <option value="primary">主模型</option>
+                                <option value="fallback">备用模型</option>
+                                <option value="cheap">低成本模型</option>
+                                <option value="review">审查模型</option>
+                            </select>
+                        </label>
+                        <label><span>temperature</span><input name="temperature" type="number" step="0.01"></label>
+                        <label><span>maxTokens</span><input name="maxTokens" type="number"></label>
+                        <label><span>topP</span><input name="topP" type="number" step="0.01"></label>
+                        <label><span>timeoutMs</span><input name="timeoutMs" type="number" value="60000"></label>
+                        <button type="submit" class="primary">绑定</button>
+                    </form>
+                </section>
+                <section class="card">
+                    <div class="card-header">
+                        <h2>场景绑定查询</h2>
+                    </div>
+                    <form id="binding-query-form" class="inline-form">
+                        <select name="sceneId" required data-select="scenes"></select>
+                        <button type="submit" class="primary">查询</button>
+                    </form>
+                    <div id="bindings-list" class="list"></div>
+                </section>
+            </div>
+        </section>
+
+        <section class="panel" id="panel-llm-overrides">
+            <div class="layout-grid">
+                <section class="card">
+                    <div class="card-header">
+                        <h2>小说模型覆盖</h2>
+                    </div>
+                    <form id="override-form" class="form-grid">
+                        <label><span>小说</span><select name="novelId" required data-select="novels"></select></label>
+                        <label><span>场景</span><select name="sceneId" required data-select="scenes"></select></label>
+                        <label><span>模型</span><select name="modelId" required data-select="models"></select></label>
+                        <label><span>temperature</span><input name="temperature" type="number" step="0.01"></label>
+                        <label><span>maxTokens</span><input name="maxTokens" type="number"></label>
+                        <label><span>topP</span><input name="topP" type="number" step="0.01"></label>
+                        <label><span>timeoutMs</span><input name="timeoutMs" type="number" value="60000"></label>
+                        <label><span>启用</span><select name="enabled"><option value="1">1</option><option value="0">0</option></select></label>
+                        <button type="submit" class="primary">保存覆盖</button>
+                    </form>
+                </section>
+                <section class="card">
+                    <div class="card-header">
+                        <h2>小说覆盖查询</h2>
+                    </div>
+                    <form id="override-query-form" class="inline-form">
+                        <select name="novelId" required data-select="novels"></select>
+                        <button type="submit" class="primary">查询</button>
+                    </form>
+                    <div id="overrides-list" class="list"></div>
+                </section>
+            </div>
+        </section>
+
+        <section class="panel" id="panel-llm-route">
+            <div class="layout-grid single">
+                <section class="card">
+                    <div class="card-header">
+                        <h2>模型路由测试</h2>
+                    </div>
+                    <form id="route-form" class="inline-form spacious">
+                        <select name="novelId" data-select="novels-optional"></select>
+                        <select name="sceneCode" required data-select="scene-codes"></select>
+                        <button type="submit" class="primary">解析路由</button>
+                    </form>
+                    <pre id="route-result" class="result-box"></pre>
+                </section>
+            </div>
+        </section>
+
+        <div id="toast" class="toast hidden"></div>
+    </main>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

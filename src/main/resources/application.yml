@@ -1,10 +1,13 @@
 spring:
   application:
     name: book-creat
+  mvc:
+    async:
+      request-timeout: 180000
   datasource:
     url: jdbc:mysql://localhost:3306/book_factory?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username:
-    password:
+    username: root
+    password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 mybatis-plus:
@@ -13,3 +16,12 @@ mybatis-plus:
   global-config:
     db-config:
       id-type: assign_id
+
+app:
+  llm:
+    default-timeout-ms: 60000
+    executor:
+      core-pool-size: 2
+      max-pool-size: 4
+      queue-capacity: 32
+      thread-name-prefix: ai-gen-
