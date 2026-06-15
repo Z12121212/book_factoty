@@ -353,3 +353,40 @@ Content-Type: application/json
   "sceneCode": "outline_generate"
 }
 ```
+
+## Chapter
+
+Create chapter:
+
+```http
+POST /api/chapters
+Content-Type: application/json
+
+{
+  "novelId": 1,
+  "volumeId": 1,
+  "chapterNo": 1,
+  "title": "第一章 雨夜旧井",
+  "outline": "主角在暴雨夜接到紧急检修通知，第一次接触异常泵井。"
+}
+```
+
+List chapters:
+
+```http
+GET /api/chapters?novelId=1&current=1&size=100
+```
+
+Generate chapter content:
+
+Before calling this API, create an LLM scene with `sceneCode = chapter_generate` and bind at least one enabled chat model.
+
+```http
+POST /api/ai/chapters/generate
+Content-Type: application/json
+
+{
+  "chapterId": 1,
+  "sceneCode": "chapter_generate"
+}
+```

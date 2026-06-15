@@ -2,6 +2,7 @@ const panelMeta = {
     genres: { title: "题材管理", subtitle: "创建与维护小说题材。" },
     novels: { title: "小说管理", subtitle: "创建小说项目并查看当前状态。" },
     outlines: { title: "大纲管理", subtitle: "维护大纲版本并查询确认版内容。" },
+    chapters: { title: "章节管理", subtitle: "创建章节记录并生成正文内容。" },
     "llm-providers": { title: "LLM 供应商", subtitle: "维护中转站或官方供应商连接信息。" },
     "llm-models": { title: "LLM 模型", subtitle: "维护可调用模型与能力标签。" },
     "llm-scenes": { title: "LLM 场景", subtitle: "定义创意、正文、摘要等业务场景。" },
@@ -13,6 +14,7 @@ const panelMeta = {
 const referenceData = {
     genres: [],
     novels: [],
+    chapters: [],
     providers: [],
     models: [],
     scenes: []
@@ -24,6 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
     applyOutlineModeVisibility();
     refreshGenres();
     refreshNovels();
+    refreshChapters();
     refreshProviders();
     refreshModels();
     refreshScenes();
@@ -139,8 +142,25 @@ function setupForms() {
         document.getElementById("route-result").textContent = JSON.stringify(result.data, null, 2);
     });
 
+    bindSubmit("chapter-form", async (form) => {
+        await api("/api/chapters", {
+            method: "POST",
+            body: formJson(form, toNumberFields("volumeId", "chapterNo"))
+        });
+        form.reset();
+        toast("章节已创建");
+        refreshChapters();
+    });
+
+    bindSubmit("chapter-query-form", async (form) => {
+        const data = formJson(form);
+        const result = await api(`/api/chapters?novelId=${encodeURIComponent(data.novelId)}&current=1&size=100`);
+        renderChapters(result.data?.records || []);
+    });
+
     document.getElementById("generate-ideas-btn")?.addEventListener("click", generateIdeas);
     document.getElementById("generate-outline-btn")?.addEventListener("click", generateOutline);
+    document.getElementById("generate-chapter-btn")?.addEventListener("click", generateChapterContent);
     document.getElementById("outline-mode")?.addEventListener("change", (event) => {
         const outlineForm = document.getElementById("outline-form");
         outlineForm.elements.outlineType.value = event.target.value;
@@ -216,6 +236,18 @@ async function refreshProviders() {
     `);
 }
 
+async function refreshChapters() {
+    if (!referenceData.novels.length) {
+        referenceData.chapters = [];
+        populateReferenceSelects();
+        return;
+    }
+    const firstNovel = referenceData.novels[0];
+    const result = await api(`/api/chapters?novelId=${encodeURIComponent(firstNovel.id)}&current=1&size=100`);
+    referenceData.chapters = result.data?.records || [];
+    populateReferenceSelects();
+}
+
 async function refreshModels() {
     const result = await api("/api/llm/models");
     referenceData.models = result.data || [];
@@ -282,6 +314,19 @@ function renderOverrides(items) {
             <span>modelId: ${item.modelId}</span>
         </div>
         <div class="list-item-content">temperature=${valueOrDash(item.temperature)}, maxTokens=${valueOrDash(item.maxTokens)}, topP=${valueOrDash(item.topP)}, timeout=${valueOrDash(item.timeoutMs)}</div>
+    `);
+}
+
+function renderChapters(items) {
+    renderList(document.getElementById("chapters-list"), items, (item) => `
+        <div class="list-item-title">第 ${item.chapterNo} 章 ${escapeHtml(item.title || "(未命名)")} <span class="badge">${escapeHtml(item.status || "-")}</span></div>
+        <div class="list-item-meta">
+            <span>ID: ${item.id}</span>
+            <span>小说: ${item.novelId}</span>
+            <span>字数: ${item.wordCount ?? 0}</span>
+        </div>
+        <div class="list-item-content">${escapeHtml(item.outline || "")}</div>
+        ${item.content ? `<div class="assistant-card-meta">正文预览：${escapeHtml(item.content.slice(0, 160))}...</div>` : ""}
     `);
 }
 
@@ -398,6 +443,56 @@ async function generateOutline() {
     }
 }
 
+async function generateChapterContent() {
+    const button = document.getElementById("generate-chapter-btn");
+    if (button?.dataset.loading === "1") {
+        return;
+    }
+    const chapterId = document.getElementById("chapter-target-id")?.value;
+    if (!chapterId) {
+        toast("请先选择目标章节", true);
+        return;
+    }
+
+    setLoadingState(button, true, "生成中...");
+    document.getElementById("chapter-result").innerHTML = `<div class="empty-box">正在生成正文，请稍候...</div>`;
+
+    try {
+        const result = await api("/api/ai/chapters/generate", {
+            method: "POST",
+            body: {
+                chapterId,
+                sceneCode: "chapter_generate"
+            }
+        });
+        renderChapterResult(result.data);
+        toast("章节正文已生成");
+        refreshChapters();
+    } catch (error) {
+        document.getElementById("chapter-result").innerHTML = `<div class="empty-box">正文生成失败，请重试。</div>`;
+        throw error;
+    } finally {
+        setLoadingState(button, false, "生成正文");
+    }
+}
+
+function renderChapterResult(data) {
+    const container = document.getElementById("chapter-result");
+    if (!data || !data.content) {
+        container.innerHTML = `<div class="empty-box">未返回可用正文。</div>`;
+        return;
+    }
+    container.innerHTML = `
+        <article class="assistant-card">
+            <div class="assistant-card-title">
+                <span>${escapeHtml(data.title || "章节正文")}</span>
+            </div>
+            <div class="assistant-card-body">${escapeHtml(data.content)}</div>
+            <div class="assistant-card-meta">字数：${data.wordCount ?? 0} / 模型：${escapeHtml(data.route?.modelName || "-")}</div>
+        </article>
+    `;
+}
+
 function optionalNumber(id) {
     const value = document.getElementById(id)?.value;
     return value ? Number(value) : undefined;
@@ -446,6 +541,11 @@ function populateReferenceSelects() {
         value: item.id,
         label: item.title
     }), { placeholder: "不指定小说" });
+
+    populateSelectGroup("chapters", referenceData.chapters, (item) => ({
+        value: item.id,
+        label: `第 ${item.chapterNo} 章 ${item.title || ""}`.trim()
+    }), { placeholder: "选择章节" });
 
     populateSelectGroup("providers", referenceData.providers, (item) => ({
         value: item.id,

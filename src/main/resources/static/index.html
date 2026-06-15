@@ -20,6 +20,7 @@
             <button class="nav-item active" data-panel="genres">题材</button>
             <button class="nav-item" data-panel="novels">小说</button>
             <button class="nav-item" data-panel="outlines">大纲</button>
+            <button class="nav-item" data-panel="chapters">章节</button>
             <button class="nav-item" data-panel="llm-providers">LLM 供应商</button>
             <button class="nav-item" data-panel="llm-models">LLM 模型</button>
             <button class="nav-item" data-panel="llm-scenes">LLM 场景</button>
@@ -203,6 +204,48 @@
                         <button type="submit" class="primary">查询</button>
                     </form>
                     <div id="outlines-list" class="list"></div>
+                </section>
+            </div>
+        </section>
+
+        <section class="panel" id="panel-chapters">
+            <div class="layout-grid">
+                <section class="card">
+                    <div class="card-header">
+                        <h2>新建章节</h2>
+                    </div>
+                    <div class="subtool">
+                        <div class="subtool-header">
+                            <h3>AI 正文助手</h3>
+                            <button type="button" class="ghost" id="generate-chapter-btn">生成正文</button>
+                        </div>
+                        <p class="subtool-tip">先创建章节并填写章节大纲，再根据当前章节记录生成正文内容。</p>
+                        <div class="subtool-grid">
+                            <label class="full-span">
+                                <span>目标章节</span>
+                                <select id="chapter-target-id" data-select="chapters"></select>
+                            </label>
+                        </div>
+                        <div id="chapter-result" class="assistant-results empty-box">点击“生成正文”后在这里查看结果。</div>
+                    </div>
+                    <form id="chapter-form" class="form-grid">
+                        <label><span>小说</span><select name="novelId" required data-select="novels"></select></label>
+                        <label><span>分卷ID（可选）</span><input name="volumeId" placeholder="可留空"></label>
+                        <label><span>章节号</span><input name="chapterNo" type="number" min="1" required></label>
+                        <label><span>章节标题</span><input name="title" maxlength="128"></label>
+                        <label><span>章节大纲</span><textarea name="outline" rows="8" required></textarea></label>
+                        <button type="submit" class="primary">创建章节</button>
+                    </form>
+                </section>
+                <section class="card">
+                    <div class="card-header">
+                        <h2>章节列表</h2>
+                    </div>
+                    <form id="chapter-query-form" class="inline-form">
+                        <select name="novelId" required data-select="novels"></select>
+                        <button type="submit" class="primary">查询</button>
+                    </form>
+                    <div id="chapters-list" class="list"></div>
                 </section>
             </div>
         </section>
